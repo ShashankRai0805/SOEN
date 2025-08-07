@@ -17,6 +17,19 @@ const createUser = async (userData = {}) => {
     return user;
 }
 
+export const getAllUsers = async ({userId}) => {
+    try {
+        const users = await userModel.find({
+            _id: { $ne: userId } // Exclude the logged-in user
+        })
+
+        return users;
+        } catch (error) {
+            throw new Error('Error fetching users');
+        }
+}
+
 export default {
-    createUser
+    createUser,
+    getAllUsers
 };
