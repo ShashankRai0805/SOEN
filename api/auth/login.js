@@ -1,8 +1,32 @@
 import connectDB from '../../lib/mongodb.js';
 import User from '../../lib/userModel.js';
 
+// Enable CORS for Vercel
+export const config = {
+    api: {
+        bodyParser: {
+            sizeLimit: '1mb',
+        },
+    },
+}
+
 export default async function handler(req, res) {
+    // Set CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    // Handle preflight OPTIONS request
+    if (req.method === 'OPTIONS') {
+        res.status(200).end();
+        return;
+    }
+    
+    console.log('Login API called:', req.method);
+    console.log('Request body:', req.body);
+    
     if (req.method !== 'POST') {
+        console.log('Method not allowed:', req.method);
         return res.status(405).json({ message: 'Method not allowed' });
     }
 
