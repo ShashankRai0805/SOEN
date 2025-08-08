@@ -1,14 +1,15 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useState, useEffect, useContext } from 'react'
 import axios from 'axios'
 
-const AuthContext = createContext()
+export const AuthContext = createContext()
 
-const API_BASE_URL = 'http://localhost:3000'
+const API_BASE_URL = 'http://localhost:3001'
 
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE_URL
 axios.defaults.withCredentials = true
 
+// useAuth hook
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {

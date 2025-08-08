@@ -53,11 +53,13 @@ io.on('connection', socket => {
                 }
             });
         }
+        console.log(`Users in room ${roomId}:`, usersInRoom.map(u => u.email));
         io.to(roomId).emit('users-update', usersInRoom);
     });
 
     // Handle sending messages
     socket.on('send-message', (messageData) => {
+        console.log(`Received message from ${socket.user.email}:`, messageData);
         const message = {
             ...messageData,
             sender: socket.user,
@@ -65,6 +67,7 @@ io.on('connection', socket => {
         };
         
         const room = messageData.room || 'general';
+        console.log(`Broadcasting message to room ${room}:`, message.text);
         io.to(room).emit('message', message);
         console.log(`Message sent to room ${room}:`, message.text);
     });

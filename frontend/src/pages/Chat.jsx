@@ -19,7 +19,7 @@ const Chat = () => {
 
   useEffect(() => {
     // Connect to socket
-    const newSocket = io('http://localhost:3000', {
+    const newSocket = io('http://localhost:3001', {
       auth: {
         token: localStorage.getItem('token')
       }
@@ -32,7 +32,11 @@ const Chat = () => {
       
       // Join project room if projectId exists
       if (projectId) {
+        console.log('Joining room:', projectId)
         newSocket.emit('join-room', projectId)
+      } else {
+        console.log('No projectId, joining general room')
+        newSocket.emit('join-room', 'general')
       }
     })
 
@@ -43,11 +47,13 @@ const Chat = () => {
 
     // Listen for messages
     newSocket.on('message', (message) => {
+      console.log('Received message:', message)
       setMessages(prev => [...prev, message])
     })
 
     // Listen for user list updates
     newSocket.on('users-update', (users) => {
+      console.log('Users update:', users)
       setOnlineUsers(users)
     })
 
@@ -79,6 +85,7 @@ const Chat = () => {
       room: projectId || 'general'
     }
 
+    console.log('Sending message:', messageData)
     socket.emit('send-message', messageData)
     setNewMessage('')
   }
