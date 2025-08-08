@@ -1,25 +1,19 @@
 import connectDB from '../../lib/mongodb.js';
 import User from '../../lib/userModel.js';
 
-// Enable CORS for Vercel
-export const config = {
-    api: {
-        bodyParser: {
-            sizeLimit: '1mb',
-        },
-    },
-}
-
 export default async function handler(req, res) {
     // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    
-    // Handle preflight OPTIONS request
+    res.setHeader('Access-Control-Allow-Credentials', true)
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT')
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+    )
+
     if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+        res.status(200).end()
+        return
     }
     
     console.log('Register API called:', req.method);
@@ -27,7 +21,7 @@ export default async function handler(req, res) {
     
     if (req.method !== 'POST') {
         console.log('Method not allowed:', req.method);
-        return res.status(405).json({ message: 'Method not allowed' });
+        return res.status(405).json({ message: `Method ${req.method} not allowed. Expected POST.` });
     }
 
     try {
