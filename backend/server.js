@@ -42,6 +42,14 @@ io.on('connection', socket => {
         socket.join(roomId);
         console.log(`User ${socket.user.email} joined room ${roomId}`);
         
+        // Send system message that user joined
+        const joinMessage = {
+            text: `👋 ${socket.user.email} joined the chat`,
+            room: roomId,
+            isSystem: true
+        };
+        socket.to(roomId).emit('system-message', joinMessage);
+        
         // Send updated user list to room
         const room = io.sockets.adapter.rooms.get(roomId);
         const usersInRoom = [];
@@ -58,18 +66,62 @@ io.on('connection', socket => {
     });
 
     // Handle sending messages
-    socket.on('send-message', (messageData) => {
+    socket.on('send-message', async (messageData) => {
         console.log(`Received message from ${socket.user.email}:`, messageData);
-        const message = {
-            ...messageData,
-            sender: socket.user,
-            timestamp: new Date()
-        };
         
-        const room = messageData.room || 'general';
-        console.log(`Broadcasting message to room ${room}:`, message.text);
-        io.to(room).emit('message', message);
-        console.log(`Message sent to room ${room}:`, message.text);
+        // Check if message starts with @ai
+        if (messageData.text.startsWith('@ai ')) {
+            // Handle AI command
+            const aiPrompt = messageData.text.substring(4); // Remove '@ai ' prefix
+            console.log(`AI prompt: ${aiPrompt}`);
+            
+            try {
+                // Import AI service dynamically to avoid circular dependencies
+                const { generateResult } = await import('./service/ai.service.js');
+                const aiResponse = await generateResult(aiPrompt);
+                
+                // Send AI response as a system message
+                const aiMessage = {
+                    text: `🤖 AI Response: ${aiResponse}`,
+                    timestamp: new Date(),
+                    room: messageData.room || 'general',
+                    sender: { email: 'AI Assistant', isAI: true },
+                    isAI: true
+                };
+                
+                const room = messageData.room || 'general';
+                io.to(room).emit('message', aiMessage);
+                console.log(`AI response sent to room ${room}`);
+                
+            } catch (error) {
+                console.error('AI service error:', error);
+                
+                // Send error message
+                const errorMessage = {
+                    text: `❌ AI Error: ${error.message}`,
+                    timestamp: new Date(),
+                    room: messageData.room || 'general',
+                    sender: { email: 'AI Assistant', isAI: true },
+                    isAI: true,
+                    isError: true
+                };
+                
+                const room = messageData.room || 'general';
+                io.to(room).emit('message', errorMessage);
+            }
+        } else {
+            // Handle regular message
+            const message = {
+                ...messageData,
+                sender: socket.user,
+                timestamp: new Date()
+            };
+            
+            const room = messageData.room || 'general';
+            console.log(`Broadcasting message to room ${room}:`, message.text);
+            io.to(room).emit('message', message);
+            console.log(`Message sent to room ${room}:`, message.text);
+        }
     });
 
     socket.on('disconnect', () => {
@@ -77,6 +129,14 @@ io.on('connection', socket => {
         // Update user lists in all rooms this user was in
         socket.rooms.forEach(room => {
             if (room !== socket.id) {
+                // Send system message that user left
+                const leaveMessage = {
+                    text: `👋 ${socket.user.email} left the chat`,
+                    room: room,
+                    isSystem: true
+                };
+                socket.to(room).emit('system-message', leaveMessage);
+                
                 const roomSockets = io.sockets.adapter.rooms.get(room);
                 const usersInRoom = [];
                 if (roomSockets) {
