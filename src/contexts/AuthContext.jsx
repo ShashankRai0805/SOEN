@@ -40,7 +40,12 @@ export const AuthProvider = ({ children }) => {
         ? '/api/auth/login' 
         : '/users/login'
       
+      console.log('Attempting login with endpoint:', endpoint)
+      console.log('Environment:', process.env.NODE_ENV)
+      
       const response = await axios.post(endpoint, { email, password })
+      console.log('Login response:', response.data)
+      
       const { token: newToken, user: userData } = response.data
       
       setToken(newToken)
@@ -50,6 +55,9 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true }
     } catch (error) {
+      console.error('Login error:', error)
+      console.error('Error response:', error.response?.data)
+      
       return { 
         success: false, 
         error: error.response?.data?.error || error.response?.data?.msg || 'Login failed' 
@@ -63,8 +71,14 @@ export const AuthProvider = ({ children }) => {
       const endpoint = process.env.NODE_ENV === 'production' 
         ? '/api/auth/register' 
         : '/users/register'
+      
+      console.log('Attempting registration with endpoint:', endpoint)
+      console.log('Environment:', process.env.NODE_ENV)
+      console.log('Registration data:', { email, password: '***' })
         
       const response = await axios.post(endpoint, { email, password })
+      console.log('Registration response:', response.data)
+      
       const { token: newToken, user: userData } = response.data
       
       setToken(newToken)
@@ -74,6 +88,10 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true }
     } catch (error) {
+      console.error('Registration error:', error)
+      console.error('Error response:', error.response?.data)
+      console.error('Error status:', error.response?.status)
+      
       return { 
         success: false, 
         error: error.response?.data?.error || error.response?.data?.msg || 'Registration failed' 

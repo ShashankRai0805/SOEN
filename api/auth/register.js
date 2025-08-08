@@ -2,16 +2,23 @@ import connectDB from '../../lib/mongodb.js';
 import User from '../../lib/userModel.js';
 
 export default async function handler(req, res) {
+    console.log('Register API called:', req.method);
+    console.log('Request body:', req.body);
+    
     if (req.method !== 'POST') {
         return res.status(405).json({ message: 'Method not allowed' });
     }
 
     try {
+        console.log('Attempting to connect to database...');
         await connectDB();
+        console.log('Database connected successfully');
         
         const { email, password } = req.body;
+        console.log('Received email:', email);
         
         if (!email || !password) {
+            console.log('Missing email or password');
             return res.status(400).json({ 
                 errors: [{ msg: 'Email and password are required' }]
             });
