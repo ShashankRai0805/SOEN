@@ -21,7 +21,12 @@ const Dashboard = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await axios.get('/projects/all')
+      // Use different endpoints for production vs development
+      const endpoint = process.env.NODE_ENV === 'production' 
+        ? '/api/projects' 
+        : '/projects/all'
+      
+      const response = await axios.get(endpoint)
       setProjects(response.data.projects || [])
     } catch (error) {
       setError('Failed to fetch projects')
@@ -37,7 +42,12 @@ const Dashboard = () => {
 
     setCreateLoading(true)
     try {
-      const response = await axios.post('/projects/create', {
+      // Use different endpoints for production vs development
+      const endpoint = process.env.NODE_ENV === 'production' 
+        ? '/api/projects' 
+        : '/projects/create'
+      
+      const response = await axios.post(endpoint, {
         name: newProjectName.trim()
       })
       
@@ -54,7 +64,12 @@ const Dashboard = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('/users/all')
+      // Use different endpoints for production vs development
+      const endpoint = process.env.NODE_ENV === 'production' 
+        ? '/api/users/all' 
+        : '/users/all'
+      
+      const response = await axios.get(endpoint)
       setAllUsers(response.data.users || [])
     } catch (error) {
       console.error('Error fetching users:', error)
@@ -78,7 +93,12 @@ const Dashboard = () => {
 
     setUserLoading(true)
     try {
-      await axios.put('/projects/add-user', {
+      // Use different endpoints for production vs development
+      const endpoint = process.env.NODE_ENV === 'production' 
+        ? '/api/projects/add-users' 
+        : '/projects/add-user'
+      
+      await axios.put(endpoint, {
         projectId: selectedProject._id,
         users: selectedUsers
       })

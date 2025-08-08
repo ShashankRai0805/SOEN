@@ -1,15 +1,17 @@
-import { createContext, useState, useEffect, useContext } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 import axios from 'axios'
 
-export const AuthContext = createContext()
+const AuthContext = createContext()
 
-const API_BASE_URL = 'http://localhost:3001'
+// Use environment variable or fallback based on environment
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? '' // Vercel will serve API routes from the same domain
+  : 'http://localhost:3001' // Local development with your backend
 
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE_URL
 axios.defaults.withCredentials = true
 
-// useAuth hook
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
@@ -33,7 +35,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('/users/login', { email, password })
+      // For production, use Vercel API routes
+      const endpoint = process.env.NODE_ENV === 'production' 
+        ? '/api/auth/login' 
+        : '/users/login'
+      
+      const response = await axios.post(endpoint, { email, password })
       const { token: newToken, user: userData } = response.data
       
       setToken(newToken)
@@ -45,14 +52,19 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return { 
         success: false, 
-        error: error.response?.data?.error || 'Login failed' 
+        error: error.response?.data?.error || error.response?.data?.msg || 'Login failed' 
       }
     }
   }
 
   const register = async (email, password) => {
     try {
-      const response = await axios.post('/users/register', { email, password })
+      // For production, use Vercel API routes
+      const endpoint = process.env.NODE_ENV === 'production' 
+        ? '/api/auth/register' 
+        : '/users/register'
+        
+      const response = await axios.post(endpoint, { email, password })
       const { token: newToken, user: userData } = response.data
       
       setToken(newToken)
@@ -64,7 +76,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return { 
         success: false, 
-        error: error.response?.data?.error || 'Registration failed' 
+        error: error.response?.data?.error || error.response?.data?.msg || 'Registration failed' 
       }
     }
   }
@@ -82,7 +94,8 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     isAuthenticated: !!token,
-    loading
+    loading,
+    API_BASE_URL
   }
 
   return (

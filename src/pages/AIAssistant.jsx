@@ -34,7 +34,12 @@ const AIAssistant = () => {
     setError('')
 
     try {
-      const response = await axios.get('/ai/get-result', {
+      // Use different endpoints for production vs development
+      const endpoint = process.env.NODE_ENV === 'production' 
+        ? '/api/ai/get-result' 
+        : '/ai/get-result'
+      
+      const response = await axios.get(endpoint, {
         params: { prompt: userMessage.content }
       })
 
