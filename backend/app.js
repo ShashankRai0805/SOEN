@@ -1,17 +1,29 @@
 import express from 'express';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import cors from 'cors';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import connect from './db/db.js';
 import userRoutes from './routes/userRoutes.js';
 import projectRoutes from './routes/projectRoute.js';
 import cookieParser from 'cookie-parser';
 import aiRoutes from './routes/ai.routes.js'; // Import AI routes
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+dotenv.config({ path: join(__dirname, '.env') });
 connect();
 
 
 const app = express();
+
+// CORS configuration
+app.use(cors({
+    origin: 'http://localhost:5173', // Vite default port
+    credentials: true
+}));
 
 app.use(morgan('dev'));
 app.use(express.json());

@@ -11,7 +11,7 @@ const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash"  // Pro model has higher free tier limits
 });
 
-export const generateResult = async(prompt) => {
+export const generateResult = async(prompt, retries = 2) => {
   try {
     if (!prompt) {
       throw new Error("Prompt is required");
@@ -19,13 +19,32 @@ export const generateResult = async(prompt) => {
     
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    return response.text();
+
+    console.log("----------------------------RESPONSE---------------------------------", response);
+    
+    // Call the text() method to get the actual text content
+    const textContent = response.text();
+    console.log("----------------------------TEXT CONTENT-----------------------------", textContent);
+    
+    return textContent;
   } catch (error) {
     console.error("Error generating AI result:", error);
+    
+    // Handle service unavailable errors with retry
+    if (error.status === 503 && retries > 0) {
+      console.log(`Model overloaded, retrying in 2 seconds... (${retries} retries left)`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return generateResult(prompt, retries - 1);
+    }
     
     // Handle quota exceeded errors
     if (error.status === 429) {
       throw new Error("API quota exceeded. Please wait and try again later. Consider upgrading to a paid plan for higher limits.");
+    }
+    
+    // Handle service unavailable errors (final)
+    if (error.status === 503) {
+      throw new Error("AI service is currently overloaded. Please try again in a few minutes.");
     }
     
     // Handle model not found errors

@@ -4,7 +4,7 @@ export const getResult = async (req, res) => {
     try {
         const {prompt} = req.query;
         const result = await ai.generateResult(prompt);
-        res.send(result);
+        res.json({ result: result });
     } catch (error) {
         console.error("Controller error:", error);
         res.status(500).json({ error: error.message || "Internal Server Error" });
