@@ -26,7 +26,7 @@ const Chat = () => {
     const fetchAllUsers = async () => {
       try {
         const endpoint = process.env.NODE_ENV === 'production' 
-          ? '/api?endpoint=users' 
+          ? '/api/users' 
           : '/users/all'
         
         console.log('Fetching users from:', endpoint)
@@ -53,7 +53,7 @@ const Chat = () => {
       try {
         const room = projectId || 'general'
         const endpoint = process.env.NODE_ENV === 'production' 
-          ? '/api?endpoint=chat-messages' 
+          ? '/api/chat' 
           : '/chat/messages'
         
         console.log('Polling messages from:', endpoint)
@@ -146,7 +146,7 @@ const Chat = () => {
     try {
       const room = projectId || 'general'
       const endpoint = process.env.NODE_ENV === 'production' 
-        ? '/api?endpoint=chat-messages' 
+        ? '/api/chat' 
         : '/chat/messages'
 
       // Check if it's an AI command
@@ -155,7 +155,7 @@ const Chat = () => {
         
         // Send AI request
         const aiEndpoint = process.env.NODE_ENV === 'production' 
-          ? '/api?endpoint=chat-ai' 
+          ? '/api/ai' 
           : '/chat/ai'
         
         try {

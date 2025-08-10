@@ -23,7 +23,7 @@ const Dashboard = () => {
     try {
       // Use different endpoints for production vs development
       const endpoint = process.env.NODE_ENV === 'production' 
-        ? '/api?endpoint=projects' 
+        ? '/api/projects' 
         : '/projects/all'
       
       const response = await axios.get(endpoint)
@@ -44,7 +44,7 @@ const Dashboard = () => {
     try {
       // Use different endpoints for production vs development
       const endpoint = process.env.NODE_ENV === 'production' 
-        ? '/api?endpoint=projects' 
+        ? '/api/projects' 
         : '/projects/create'
       
       const response = await axios.post(endpoint, {
@@ -66,7 +66,7 @@ const Dashboard = () => {
     try {
       // Use different endpoints for production vs development
       const endpoint = process.env.NODE_ENV === 'production' 
-        ? '/api?endpoint=users' 
+        ? '/api/users' 
         : '/users/all'
       
       const response = await axios.get(endpoint)
@@ -95,7 +95,7 @@ const Dashboard = () => {
     try {
       // Use different endpoints for production vs development
       const endpoint = process.env.NODE_ENV === 'production' 
-        ? '/api?endpoint=project-users' 
+        ? '/api/project-users' 
         : '/projects/add-user'
       
       await axios.put(endpoint, {

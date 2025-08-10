@@ -47,7 +47,8 @@ export default function handler(req, res) {
     return res.status(200).end()
   }
 
-  const { endpoint } = req.query
+  // Extract endpoint from query params or URL path
+  const endpoint = req.query.endpoint || (req.query.endpoint && req.query.endpoint[0])
   
   console.log('API called with endpoint:', endpoint)
   console.log('Method:', req.method)

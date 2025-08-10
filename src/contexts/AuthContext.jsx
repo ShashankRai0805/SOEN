@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
     try {
       // For production, use Vercel API routes
       const endpoint = process.env.NODE_ENV === 'production' 
-        ? '/api?endpoint=auth&action=login' 
+        ? '/api/auth?action=login' 
         : '/users/login'
       
       console.log('Attempting login with endpoint:', endpoint)
@@ -69,7 +69,7 @@ export const AuthProvider = ({ children }) => {
     try {
       // For production, use Vercel API routes
       const endpoint = process.env.NODE_ENV === 'production' 
-        ? '/api?endpoint=auth&action=register' 
+        ? '/api/auth?action=register' 
         : '/users/register'
       
       console.log('Attempting registration with endpoint:', endpoint)
