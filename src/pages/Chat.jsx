@@ -25,7 +25,7 @@ const Chat = () => {
     const fetchAllUsers = async () => {
       try {
         const endpoint = process.env.NODE_ENV === 'production' 
-          ? '/api/users/all' 
+          ? '/api?endpoint=users' 
           : '/users/all'
         
         const response = await axios.get(endpoint)
@@ -44,7 +44,7 @@ const Chat = () => {
       try {
         const room = projectId || 'general'
         const endpoint = process.env.NODE_ENV === 'production' 
-          ? '/api/chat/messages' 
+          ? '/api?endpoint=chat-messages' 
           : '/chat/messages'
         
         const params = { 
@@ -119,7 +119,7 @@ const Chat = () => {
     try {
       const room = projectId || 'general'
       const endpoint = process.env.NODE_ENV === 'production' 
-        ? '/api/chat/messages' 
+        ? '/api?endpoint=chat-messages' 
         : '/chat/messages'
 
       // Check if it's an AI command
@@ -128,7 +128,7 @@ const Chat = () => {
         
         // Send AI request
         const aiEndpoint = process.env.NODE_ENV === 'production' 
-          ? '/api/chat/ai' 
+          ? '/api?endpoint=chat-ai' 
           : '/chat/ai'
         
         try {
