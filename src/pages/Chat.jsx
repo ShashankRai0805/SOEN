@@ -1,36 +1,36 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { io } from 'socket.io-client'
 import { useAuth } from '../contexts/AuthContext'
+import axios from 'axios'
 
 const Chat = () => {
   const [searchParams] = useSearchParams()
   const projectId = searchParams.get('project')
   
-  const [socket, setSocket] = useState(null)
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
   const [onlineUsers, setOnlineUsers] = useState([])
   const [allUsers, setAllUsers] = useState([])
-  const [connected, setConnected] = useState(false)
+  const [connected, setConnected] = useState(true)
   const [loading, setLoading] = useState(true)
   const [aiLoading, setAiLoading] = useState(false)
   
   const { user } = useAuth()
   const messagesEndRef = useRef(null)
+  const pollingRef = useRef(null)
+  const lastMessageTime = useRef(null)
 
   useEffect(() => {
     // Fetch all users first
     const fetchAllUsers = async () => {
       try {
-        const response = await fetch('http://localhost:3001/users/all', {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setAllUsers(data.users)
+        const endpoint = process.env.NODE_ENV === 'production' 
+          ? '/api/users/all' 
+          : '/users/all'
+        
+        const response = await axios.get(endpoint)
+        if (response.data.success) {
+          setAllUsers(response.data.users)
         }
       } catch (error) {
         console.error('Error fetching users:', error)
@@ -39,65 +39,67 @@ const Chat = () => {
 
     fetchAllUsers()
 
-    // Connect to socket
-    const newSocket = io('http://localhost:3001', {
-      auth: {
-        token: localStorage.getItem('token')
+    // Start polling for messages
+    const pollMessages = async () => {
+      try {
+        const room = projectId || 'general'
+        const endpoint = process.env.NODE_ENV === 'production' 
+          ? '/api/chat/messages' 
+          : '/chat/messages'
+        
+        const params = { 
+          room,
+          ...(lastMessageTime.current && { since: lastMessageTime.current })
+        }
+        
+        const response = await axios.get(endpoint, { params })
+        
+        if (response.data.success) {
+          const { messages: newMessages, onlineUsers: users } = response.data
+          
+          if (newMessages.length > 0) {
+            setMessages(prev => {
+              // If this is the first fetch, replace all messages
+              if (!lastMessageTime.current) {
+                return newMessages
+              }
+              // Otherwise, append new messages
+              return [...prev, ...newMessages]
+            })
+            
+            // Update last message time
+            lastMessageTime.current = newMessages[newMessages.length - 1]?.timestamp
+            
+            // Stop AI loading if we receive an AI response
+            if (newMessages.some(msg => msg.type === 'ai')) {
+              setAiLoading(false)
+            }
+          }
+          
+          setOnlineUsers(users || [])
+          setConnected(true)
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Polling error:', error)
+        setConnected(false)
       }
-    })
+    }
 
-    newSocket.on('connect', () => {
-      console.log('Connected to server')
-      setConnected(true)
-      setLoading(false)
-      
-      // Join project room if projectId exists
-      if (projectId) {
-        console.log('Joining room:', projectId)
-        newSocket.emit('join-room', projectId)
-      } else {
-        console.log('No projectId, joining general room')
-        newSocket.emit('join-room', 'general')
+    // Initial fetch
+    pollMessages()
+
+    // Set up polling every 2 seconds
+    pollingRef.current = setInterval(pollMessages, 2000)
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
       }
-    })
+    }
+  }, [projectId, user])
 
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from server')
-      setConnected(false)
-    })
-
-    // Listen for messages
-    newSocket.on('message', (message) => {
-      console.log('Received message:', message)
-      setMessages(prev => [...prev, message])
-      
-      // Stop AI loading if we receive an AI response
-      if (message.isAI) {
-        setAiLoading(false)
-      }
-    })
-
-    // Listen for connection errors
-    newSocket.on('error', (error) => {
-      console.error('Socket error:', error)
-      setConnected(false)
-    })
-
-    // Listen for user list updates
-    newSocket.on('users-update', (users) => {
-      console.log('Users update:', users)
-      setOnlineUsers(users)
-    })
-
-    // Listen for system messages (user joined/left)
-    newSocket.on('system-message', (message) => {
-      console.log('System message:', message)
-      setMessages(prev => [...prev, {
-        ...message,
-        isSystem: true,
-        timestamp: new Date()
-      }])
-    })
+  // Auto-scroll to bottom when new messages arrive
 
     // Handle connection errors
     newSocket.on('connect_error', (error) => {
@@ -105,36 +107,67 @@ const Chat = () => {
       setLoading(false)
     })
 
-    setSocket(newSocket)
-
-    return () => {
-      newSocket.close()
-    }
-  }, [projectId])
-
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    // Scroll to bottom when new message arrives
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const sendMessage = (e) => {
+  const sendMessage = async (e) => {
     e.preventDefault()
-    if (!newMessage.trim() || !socket || !connected) return
+    if (!newMessage.trim()) return
 
-    // Check if it's an AI command
-    if (newMessage.startsWith('@ai ')) {
-      setAiLoading(true)
+    try {
+      const room = projectId || 'general'
+      const endpoint = process.env.NODE_ENV === 'production' 
+        ? '/api/chat/messages' 
+        : '/chat/messages'
+
+      // Check if it's an AI command
+      if (newMessage.startsWith('@ai ')) {
+        setAiLoading(true)
+        
+        // Send AI request
+        const aiEndpoint = process.env.NODE_ENV === 'production' 
+          ? '/api/chat/ai' 
+          : '/chat/ai'
+        
+        try {
+          const aiResponse = await axios.post(aiEndpoint, {
+            message: newMessage.slice(4) // Remove '@ai ' prefix
+          })
+          
+          // Send the AI response as a message
+          await axios.post(endpoint, {
+            message: aiResponse.data.aiResponse,
+            room,
+            user: {
+              email: 'AI Assistant',
+              _id: 'ai'
+            },
+            type: 'ai'
+          })
+          
+        } catch (aiError) {
+          console.error('AI error:', aiError)
+          setAiLoading(false)
+        }
+      }
+
+      // Send the user message
+      await axios.post(endpoint, {
+        message: newMessage,
+        room,
+        user: {
+          email: user.email,
+          _id: user._id || user.email
+        },
+        type: 'message'
+      })
+
+      setNewMessage('')
+    } catch (error) {
+      console.error('Send message error:', error)
     }
-
-    const messageData = {
-      text: newMessage,
-      timestamp: new Date(),
-      room: projectId || 'general'
-    }
-
-    console.log('Sending message:', messageData)
-    socket.emit('send-message', messageData)
-    setNewMessage('')
   }
 
   const formatTime = (timestamp) => {
@@ -216,38 +249,41 @@ const Chat = () => {
             ) : (
               <>
                 {messages.map((message, index) => {
-                  const isCurrentUser = message.sender?.email === user?.email
+                  const isCurrentUser = message.user?.email === user?.email
+                  const isAI = message.type === 'ai'
+                  const isSystem = message.type === 'system'
+                  
                   return (
                     <div
-                      key={index}
-                      className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                      key={message.id || index}
+                      className={`flex ${isCurrentUser && !isAI ? 'justify-end' : 'justify-start'}`}
                     >
                       <div
                         className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                          message.isSystem
+                          isSystem
                             ? 'bg-yellow-100 text-black border-l-2 border-yellow-500 text-center'
-                            : message.isAI 
+                            : isAI 
                             ? 'bg-blue-100 text-black border-l-4 border-blue-500'
                             : isCurrentUser
                             ? 'bg-black text-white'
                             : 'bg-gray-100 text-black'
                         }`}
                       >
-                        {!isCurrentUser && !message.isAI && !message.isSystem && (
+                        {!isCurrentUser && !isAI && !isSystem && (
                           <p className="text-xs text-gray-500 mb-1">
-                            {message.sender?.email || 'Unknown'}
+                            {message.user?.email || 'Unknown'}
                           </p>
                         )}
-                        {message.isAI && (
+                        {isAI && (
                           <p className="text-xs text-blue-600 mb-1 font-medium">
                             🤖 AI Assistant
                           </p>
                         )}
-                        <p className={`text-sm ${message.isError ? 'text-red-600' : ''}`}>
-                          {message.text}
+                        <p className="text-sm">
+                          {message.message}
                         </p>
                         <p className={`text-xs mt-1 ${
-                          message.isAI 
+                          isAI 
                             ? 'text-blue-500' 
                             : isCurrentUser
                             ? 'text-gray-300' 
