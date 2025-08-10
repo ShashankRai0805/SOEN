@@ -14,6 +14,7 @@ const Chat = () => {
   const [connected, setConnected] = useState(true)
   const [loading, setLoading] = useState(true)
   const [aiLoading, setAiLoading] = useState(false)
+  const [error, setError] = useState(null)
   
   const { user } = useAuth()
   const messagesEndRef = useRef(null)
@@ -28,12 +29,20 @@ const Chat = () => {
           ? '/api?endpoint=users' 
           : '/users/all'
         
+        console.log('Fetching users from:', endpoint)
+        
         const response = await axios.get(endpoint)
+        console.log('Users response:', response.data)
+        
         if (response.data.success) {
           setAllUsers(response.data.users)
+          console.log('Users set:', response.data.users)
+        } else {
+          console.error('Failed to fetch users:', response.data)
         }
       } catch (error) {
         console.error('Error fetching users:', error)
+        console.error('Error response:', error.response?.data)
       }
     }
 
@@ -47,15 +56,25 @@ const Chat = () => {
           ? '/api?endpoint=chat-messages' 
           : '/chat/messages'
         
+        console.log('Polling messages from:', endpoint)
+        console.log('Room:', room)
+        console.log('Environment:', process.env.NODE_ENV)
+        
         const params = { 
           room,
           ...(lastMessageTime.current && { since: lastMessageTime.current })
         }
         
+        console.log('Request params:', params)
+        
         const response = await axios.get(endpoint, { params })
+        
+        console.log('Poll response:', response.data)
         
         if (response.data.success) {
           const { messages: newMessages, onlineUsers: users } = response.data
+          
+          console.log('New messages:', newMessages)
           
           if (newMessages.length > 0) {
             setMessages(prev => {
@@ -79,10 +98,18 @@ const Chat = () => {
           setOnlineUsers(users || [])
           setConnected(true)
           setLoading(false)
+        } else {
+          console.error('API returned success: false', response.data)
+          setConnected(false)
+          setError('Failed to connect to chat server')
         }
       } catch (error) {
         console.error('Polling error:', error)
+        console.error('Error response:', error.response?.data)
+        console.error('Error status:', error.response?.status)
         setConnected(false)
+        setLoading(false)
+        setError(`Connection error: ${error.response?.status || error.message}`)
       }
     }
 
@@ -183,6 +210,34 @@ const Chat = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-black mx-auto"></div>
           <p className="mt-4 text-gray-600">Connecting to chat...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Connection Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button 
+            onClick={() => {
+              setError(null)
+              setLoading(true)
+              window.location.reload()
+            }}
+            className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 mr-2"
+          >
+            Retry
+          </button>
+          <button 
+            onClick={() => window.history.back()}
+            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+          >
+            Go Back
+          </button>
         </div>
       </div>
     )

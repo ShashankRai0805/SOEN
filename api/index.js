@@ -49,9 +49,20 @@ export default function handler(req, res) {
 
   const { endpoint } = req.query
   
+  console.log('API called with endpoint:', endpoint)
+  console.log('Method:', req.method)
+  console.log('Query:', req.query)
+  console.log('Body:', req.body)
+  
   try {
     // Route to appropriate handler based on endpoint
     switch (endpoint) {
+      case 'health':
+        return res.status(200).json({
+          success: true,
+          message: 'API is healthy',
+          timestamp: new Date().toISOString()
+        })
       case 'auth':
         return handleAuth(req, res)
       case 'projects':
@@ -67,14 +78,16 @@ export default function handler(req, res) {
       default:
         return res.status(404).json({
           success: false,
-          error: `Endpoint '${endpoint}' not found`
+          error: `Endpoint '${endpoint}' not found`,
+          availableEndpoints: ['health', 'auth', 'projects', 'users', 'chat-messages', 'chat-ai', 'project-users']
         })
     }
   } catch (error) {
     console.error('API Error:', error)
     return res.status(500).json({
       success: false,
-      error: 'Internal server error'
+      error: 'Internal server error',
+      details: error.message
     })
   }
 }
@@ -159,10 +172,14 @@ function handleProjects(req, res) {
 
 // Users handler
 function handleUsers(req, res) {
+  console.log('handleUsers called with method:', req.method)
+  
   if (req.method !== 'GET') {
     return res.status(405).json({ success: false, message: 'Method not allowed' })
   }
 
+  console.log('Returning users:', mockUsers)
+  
   return res.status(200).json({
     success: true,
     users: mockUsers
@@ -171,8 +188,15 @@ function handleUsers(req, res) {
 
 // Chat messages handler
 function handleChatMessages(req, res) {
+  console.log('handleChatMessages called with method:', req.method)
+  console.log('Query params:', req.query)
+  console.log('Body:', req.body)
+  
   if (req.method === 'GET') {
     const { room = 'general', since } = req.query
+    
+    console.log('Getting messages for room:', room)
+    console.log('Since:', since)
     
     let filteredMessages = messages.filter(msg => msg.room === room)
     
@@ -180,6 +204,9 @@ function handleChatMessages(req, res) {
       const sinceTime = new Date(since)
       filteredMessages = filteredMessages.filter(msg => new Date(msg.timestamp) > sinceTime)
     }
+
+    console.log('Returning messages:', filteredMessages)
+    console.log('Online users:', Array.from(users.values()))
 
     return res.status(200).json({
       success: true,
@@ -190,6 +217,8 @@ function handleChatMessages(req, res) {
 
   if (req.method === 'POST') {
     const { message, room = 'general', user, type = 'message' } = req.body
+
+    console.log('Posting message:', { message, room, user, type })
 
     if (!message || !user) {
       return res.status(400).json({
@@ -208,6 +237,7 @@ function handleChatMessages(req, res) {
     }
 
     messages.push(newMessage)
+    console.log('Message added:', newMessage)
 
     // Keep only last 100 messages per room
     const roomMessages = messages.filter(m => m.room === room)
@@ -222,6 +252,8 @@ function handleChatMessages(req, res) {
       room,
       lastSeen: new Date().toISOString()
     })
+
+    console.log('Updated user status for:', userId)
 
     return res.status(200).json({
       success: true,
